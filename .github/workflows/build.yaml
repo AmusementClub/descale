@@ -31,7 +31,7 @@ jobs:
           git clone https://github.com/vapoursynth/vapoursynth --depth=1 --branch R54
           mkdir src/vapoursynth
           cp vapoursynth/include/*.h src/vapoursynth/
-          sed -i -e '/#include <V/y|<>|""|' src/vsplugin.c
+          sed -i -e '/#include <V/y|<>|""|' src/vsplugin.cc
       - name: Meson setup
         run: meson setup builddir/ -Db_vscrt=mt
       - name: Meson compile
