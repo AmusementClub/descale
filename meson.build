@@ -8,6 +8,8 @@ add_global_arguments(['-D_XOPEN_SOURCE=700'], language: 'c')
 
 cc = meson.get_compiler('c')
 
+gcc_syntax = cc.get_argument_syntax() == 'gcc'
+
 includedirs = ['include', 'src']
 
 sources = ['src/descale.c', 'src/vsplugin.cc']
@@ -31,13 +33,16 @@ else
 endif
 
 if host_machine.cpu_family().startswith('x86')
-    add_project_arguments('-DDESCALE_X86', '-mfpmath=sse', '-msse2', language : 'c')
+    add_project_arguments('-DDESCALE_X86', language : 'c')
+    if gcc_syntax
+        add_project_arguments('-mfpmath=sse', '-msse2', language : 'c')
+    endif
 
     sources += ['src/x86/cpuinfo_x86.c']
 
     libs += static_library('descale_avx2', 'src/x86/descale_avx2.c',
                 dependencies: m_dep,
-                c_args: ['-mavx2', '-mfma'],
+                c_args: gcc_syntax ? ['-mavx2', '-mfma'] : ['/arch:AVX2'],
                 pic: true,
                 include_directories: includedirs
             )
