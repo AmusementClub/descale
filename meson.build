@@ -9,6 +9,7 @@ add_global_arguments(['-D_XOPEN_SOURCE=700'], language: 'c')
 cc = meson.get_compiler('c')
 
 gcc_syntax = cc.get_argument_syntax() == 'gcc'
+is_windows = host_machine.system() == 'windows'
 
 includedirs = ['include', 'src']
 
@@ -22,7 +23,7 @@ deps = []
 # so we don't need to have VS fully installed
 # in our build environment. Just the header files
 # are enough.
-if host_machine.system() == 'windows'
+if is_windows
     installdir = join_paths(get_option('libdir'), 'vapoursynth')
     m_dep = []
 else
@@ -53,7 +54,7 @@ shared_module('descale', sources,
     dependencies: deps,
     include_directories: includedirs,
     link_with: libs,
-    name_prefix: 'lib',
+    name_prefix: is_windows ? '' : 'lib',
     install: true,
     install_dir: installdir
 )
