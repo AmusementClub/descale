@@ -21,7 +21,8 @@
  */
 
 
-#include <pthread.h>
+#include <memory>
+#include <mutex>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <vapoursynth/VapourSynth.h>
@@ -33,7 +34,7 @@
 struct VSDescaleData
 {
     bool initialized;
-    pthread_mutex_t lock;
+    std::once_flag once;
 
     VSNodeRef *node;
     VSVideoInfo vi;
@@ -51,14 +52,10 @@ static const VSFrameRef *VS_CC descale_get_frame(int n, int activationReason, vo
 
     } else if (activationReason == arAllFramesReady) {
 
-        if (!d->initialized) {
-            pthread_mutex_lock(&d->lock);
-            if (!d->initialized) {
-                initialize_descale_data(&d->dd);
-                d->initialized = true;
-            }
-            pthread_mutex_unlock(&d->lock);
-        }
+        std::call_once(d->once, [=]() {
+            initialize_descale_data(&d->dd);
+            d->initialized = true;
+        });
 
         const VSFormat *fmt = d->vi.format;
         const VSFrameRef *src = vsapi->getFrameFilter(n, d->node, frame_ctx);
@@ -132,15 +129,14 @@ static void VS_CC descale_free(void *instance_data, VSCore *core, const VSAPI *v
         }
     }
 
-    pthread_mutex_destroy(&d->lock);
-
-    free(d);
+    delete d;
 }
 
 
 static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, VSCore *core, const VSAPI *vsapi)
 {
-    struct VSDescaleData d = {0};
+    auto data = std::make_unique<VSDescaleData>();
+    VSDescaleData &d = *data.get();
     struct DescaleParams params {};
 
     if (user_data == NULL) {
@@ -378,12 +374,9 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
 
     d.dd.dsapi = get_descale_api(opt_enum);
     d.initialized = false;
-    pthread_mutex_init(&d.lock, NULL);
 
-    struct VSDescaleData *data = new VSDescaleData;
-    *data = d;
-    data->dd.params = params;
-    vsapi->createFilter(in, out, funcname, descale_init, descale_get_frame, descale_free, fmParallel, 0, data, core);
+    d.dd.params = params;
+    vsapi->createFilter(in, out, funcname, descale_init, descale_get_frame, descale_free, fmParallel, 0, data.release(), core);
 }
 
 
