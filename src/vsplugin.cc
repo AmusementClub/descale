@@ -141,7 +141,7 @@ static void VS_CC descale_free(void *instance_data, VSCore *core, const VSAPI *v
 static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, VSCore *core, const VSAPI *vsapi)
 {
     struct VSDescaleData d = {0};
-    struct DescaleParams params = {0};
+    struct DescaleParams params {};
 
     if (user_data == NULL) {
         const char *kernel = vsapi->propGetData(in, "kernel", 0, NULL);
@@ -162,7 +162,7 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
             return;
         }
     } else {
-        params.mode = (enum DescaleMode)user_data;
+        params.mode = (enum DescaleMode)(uintptr_t)user_data;
     }
 
     d.node = vsapi->propGetNode(in, "src", 0, NULL);
@@ -245,7 +245,7 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
     d.dd.process_h = (d.dd.dst_width == d.dd.src_width && d.dd.shift_h == 0 && d.dd.active_width != (double)d.dd.dst_width) ? false : true;
     d.dd.process_v = (d.dd.dst_height == d.dd.src_height && d.dd.shift_v == 0 && d.dd.active_height != (double)d.dd.dst_height) ? false : true;
 
-    char *funcname;
+    const char *funcname;
 
     if (params.mode == DESCALE_MODE_BILINEAR) {
         funcname = "Debilinear";
@@ -380,7 +380,7 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
     d.initialized = false;
     pthread_mutex_init(&d.lock, NULL);
 
-    struct VSDescaleData *data = malloc(sizeof d);
+    struct VSDescaleData *data = new VSDescaleData;
     *data = d;
     data->dd.params = params;
     vsapi->createFilter(in, out, funcname, descale_init, descale_get_frame, descale_free, fmParallel, 0, data, core);

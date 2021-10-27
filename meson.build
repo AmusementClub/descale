@@ -1,5 +1,5 @@
-project('Descale', 'c',
-    default_options: ['buildtype=release', 'b_ndebug=if-release', 'c_std=c99'],
+project('Descale', 'c', 'cpp',
+    default_options: ['buildtype=release', 'b_ndebug=if-release', 'c_std=c99', 'cpp_std=c++14'],
     meson_version: '>=0.51.0',
     version: '7'
 )
@@ -10,7 +10,7 @@ cc = meson.get_compiler('c')
 
 includedirs = ['include', 'src']
 
-sources = ['src/descale.c', 'src/vsplugin.c']
+sources = ['src/descale.c', 'src/vsplugin.cc']
 
 libs = []
 
