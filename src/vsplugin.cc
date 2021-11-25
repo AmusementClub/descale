@@ -21,6 +21,7 @@
  */
 
 
+#include <iostream>
 #include <memory>
 #include <mutex>
 #include <stdbool.h>
@@ -38,6 +39,9 @@ struct VSDescaleData
 
     VSNodeRef *node;
     VSVideoInfo vi;
+
+    VSFuncRef *custom = nullptr;
+    VSMap *in = nullptr, *out = nullptr;
 
     struct DescaleData dd;
 };
@@ -129,6 +133,13 @@ static void VS_CC descale_free(void *instance_data, VSCore *core, const VSAPI *v
         }
     }
 
+    if (d->custom)
+        vsapi->freeFunc(d->custom);
+    if (d->in)
+        vsapi->freeMap(d->in);
+    if (d->out)
+        vsapi->freeMap(d->out);
+
     delete d;
 }
 
@@ -140,7 +151,10 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
     struct DescaleParams params {};
 
     if (user_data == NULL) {
-        const char *kernel = vsapi->propGetData(in, "kernel", 0, NULL);
+        int error = 0;
+        const char *kernel = vsapi->propGetData(in, "kernel", 0, &error);
+        if (error != 0)
+            kernel = "custom";
         if (string_is_equal_ignore_case(kernel, "bilinear"))
             params.mode = DESCALE_MODE_BILINEAR;
         else if (string_is_equal_ignore_case(kernel, "bicubic"))
@@ -153,7 +167,37 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
             params.mode = DESCALE_MODE_SPLINE36;
         else if (string_is_equal_ignore_case(kernel, "spline64"))
             params.mode = DESCALE_MODE_SPLINE64;
-        else {
+        else if (string_is_equal_ignore_case(kernel, "custom")) {
+            params.mode = DESCALE_MODE_CUSTOM;
+            VSFuncRef *f = d.custom = vsapi->propGetFunc(in, "custom", 0, &error);
+            if (error != 0) {
+                vsapi->setError(out, "Descale: Mising kernel argument or missing custom kernel function?");
+                return;
+            }
+            params.support = vsapi->propGetInt(in, "support", 0, &error);
+            if (error != 0) {
+                vsapi->freeFunc(f);
+                vsapi->setError(out, "Descale: Mising support argument for the custom kernel function.");
+                return;
+            }
+            VSMap *in = d.in = vsapi->createMap();
+            VSMap *out = d.out = vsapi->createMap();
+            params.kernel = [f, vsapi, in, out](double x) -> double {
+                vsapi->propSetFloat(in, "x", x, paReplace);
+                vsapi->clearMap(out);
+                vsapi->callFunc(f, in, out, NULL, NULL);
+                if (vsapi->getError(out)) {
+                    std::cerr << "custom kernel error: " << vsapi->getError(out) << " at x = " <<
+                       x  << std::endl;
+                    return 0.0;
+                }
+                int error = 0;
+                double y = vsapi->propGetFloat(out, "val", 0, &error);
+                if (error != 0)
+                    std::cerr << "custom kernel did not return value for x = " << x << std::endl;
+                return y;
+            };
+        } else {
             vsapi->setError(out, "Descale: Invalid kernel specified.");
             return;
         }
@@ -457,7 +501,7 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit(VSConfigPlugin config_func, VSRegist
             "src:clip;"
             "width:int;"
             "height:int;"
-            "kernel:data;"
+            "kernel:data:opt;"
             "taps:int:opt;"
             "b:float:opt;"
             "c:float:opt;"
@@ -465,6 +509,8 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit(VSConfigPlugin config_func, VSRegist
             "src_top:float:opt;"
             "src_width:float:opt;"
             "src_height:float:opt;"
-            "opt:int:opt",
+            "opt:int:opt;"
+            "custom:func:opt;"
+            "support:int:opt",
             descale_create, NULL, plugin);
 }

@@ -20,7 +20,12 @@ descale.Despline36(clip src, int width, int height, float src_left=0.0, float sr
 
 descale.Despline64(clip src, int width, int height, float src_left=0.0, float src_top=0.0, float src_width=width, float src_height=height, int opt=0)
 
-descale.Descale(clip src, int width, int height, str kernel, int taps=3, float b=0.0, float c=0.0, float src_left=0.0, float src_top=0.0, float src_width=width, float src_height=height, int opt=0)
+descale.Descale(clip src, int width, int height, str kernel, int taps=3, float b=0.0, float c=0.0, float src_left=0.0, float src_top=0.0, float src_width=width, float src_height=height, int opt=0, func custom=None, int support=0)
+```
+
+To use a custom kernel implemented in Python, pass the custom kernel and its support via the `custom` and `support` arguments. For example, this is another way to implement `core.descale.Debilinear(src, dw, dh)`:
+```python
+    dsed = core.descale.Descale(src, dw, dh, custom=lambda x: max(0, 1-abs(x)), support=1)
 ```
 
 ## How does this work?

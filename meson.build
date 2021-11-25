@@ -13,7 +13,7 @@ is_windows = host_machine.system() == 'windows'
 
 includedirs = ['include', 'src']
 
-sources = ['src/descale.c', 'src/vsplugin.cc']
+sources = ['src/descale.cc', 'src/vsplugin.cc']
 
 libs = []
 

@@ -35,10 +35,13 @@ jobs:
       - name: Meson setup
         run: meson setup builddir/ -Db_vscrt=mt
       - name: Meson compile
-        run: meson compile -C builddir/ -v
+        run: |
+            meson compile -C builddir/ -v
+            copy builddir/descale.dll .
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
           name: release-${{matrix.arch}}
           path: |
-            builddir/descale.dll
+            descale.dll
+            descale.py

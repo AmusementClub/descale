@@ -25,6 +25,8 @@
 #define DESCALE_H
 
 #ifdef __cplusplus
+#include <functional>
+
 extern "C" {
 #endif
 
@@ -36,7 +38,8 @@ typedef enum DescaleMode
     DESCALE_MODE_LANCZOS  = 3,
     DESCALE_MODE_SPLINE16 = 4,
     DESCALE_MODE_SPLINE36 = 5,
-    DESCALE_MODE_SPLINE64 = 6
+    DESCALE_MODE_SPLINE64 = 6,
+    DESCALE_MODE_CUSTOM   = 7,
 } DescaleMode;
 
 
@@ -55,15 +58,23 @@ typedef enum DescaleOpt
 } DescaleOpt;
 
 
+#ifndef __cplusplus
+struct DescaleParams;
+#else
 typedef struct DescaleParams
 {
     enum DescaleMode mode;
+
+    int support;
+    std::function<double(double)> kernel;
+
     int taps;
     double param1;
     double param2;
     double shift;
     double active_dim;
 } DescaleParams;
+#endif
 
 
 typedef struct DescaleCore

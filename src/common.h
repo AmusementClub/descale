@@ -8,6 +8,11 @@
     #include <malloc.h>
 #endif
 
+#if defined(_MSC_VER) && defined(__cplusplus)
+#define restrict __restrict
+#elif !defined(_MSC_VER)
+#define restrict __restrict__
+#endif
 
 #define DSMAX(a, b) ((a) > (b) ? (a) : (b))
 #define DSMIN(a, b) ((a) > (b) ? (b) : (a))
