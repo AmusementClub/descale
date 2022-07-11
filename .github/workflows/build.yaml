@@ -25,13 +25,19 @@ jobs:
           python-version: '3.x'
       - name: install meson and ninja
         run: pip install meson ninja
+      - name: Plug in vs-api3
+        shell: bash
+        run: |
+          git clone https://github.com/AmusementClub/vs-api3 --depth=1 --branch master api3
+          cp api3/api3.cc src/
+          sed -i -e "/vsplugin.cc'/s//&, 'src\\/api3.cc'/" meson.build
+          cat meson.build
       - name: download VS headers and patch header location
         shell: bash
         run: |
-          git clone https://github.com/vapoursynth/vapoursynth --depth=1 --branch R54
-          mkdir src/vapoursynth
-          cp vapoursynth/include/*.h src/vapoursynth/
-          sed -i -e '/#include <V/y|<>|""|' src/vsplugin.cc
+          git clone https://github.com/AmusementClub/vapoursynth-classic --depth=1 --branch doodle2 vapoursynth
+          cp vapoursynth/include/*.h src/
+          sed -i -e '/#include <vapoursynth/ { s|vapoursynth/||g; y|<>|""|; }' src/vsplugin.cc
       - name: Meson setup
         run: meson setup builddir/ -Db_vscrt=mt
       - name: Meson compile
