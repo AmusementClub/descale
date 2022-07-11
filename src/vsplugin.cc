@@ -21,7 +21,8 @@
  */
 
 
-#include <pthread.h>
+#include <memory>
+#include <mutex>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -35,7 +36,7 @@
 struct VSDescaleData
 {
     bool initialized;
-    pthread_mutex_t lock;
+    std::once_flag once;
 
     VSNode *node;
     VSVideoInfo vi;
@@ -60,14 +61,10 @@ static const VSFrame *VS_CC descale_get_frame(int n, int activation_reason, void
 
     } else if (activation_reason == arAllFramesReady) {
 
-        if (!d->initialized) {
-            pthread_mutex_lock(&d->lock);
-            if (!d->initialized) {
-                initialize_descale_data(&d->dd);
-                d->initialized = true;
-            }
-            pthread_mutex_unlock(&d->lock);
-        }
+        std::call_once(d->once, [=]() {
+            initialize_descale_data(&d->dd);
+            d->initialized = true;
+        });
 
         const VSVideoFormat fmt = d->vi.format;
         const VSFrame *src = vsapi->getFrameFilter(n, d->node, frame_ctx);
@@ -125,15 +122,13 @@ static void VS_CC descale_free(void *instance_data, VSCore *core, const VSAPI *v
         }
     }
 
-    pthread_mutex_destroy(&d->lock);
-
     if (d->dd.params.mode == DESCALE_MODE_CUSTOM) {
         struct VSCustomKernelData *kd = (struct VSCustomKernelData *)d->dd.params.custom_kernel.user_data;
         vsapi->freeFunction(kd->custom_kernel);
         free(kd);
     }
 
-    free(d);
+    delete d;
 }
 
 
@@ -168,8 +163,9 @@ static double custom_kernel_f(double x, void *user_data)
 
 static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, VSCore *core, const VSAPI *vsapi)
 {
-    struct VSDescaleData d = {0};
-    struct DescaleParams params = {0};
+    auto data = std::make_unique<VSDescaleData>();
+    VSDescaleData &d = *data.get();
+    struct DescaleParams params {};
 
     VSFunction *custom_kernel = NULL;
     if (user_data == NULL) {
@@ -206,19 +202,19 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
         } else {
             params.mode = DESCALE_MODE_CUSTOM;
             params.custom_kernel.f = &custom_kernel_f;
-            struct VSCustomKernelData *kd = malloc(sizeof (struct VSCustomKernelData));
+            struct VSCustomKernelData *kd = (struct VSCustomKernelData *)malloc(sizeof (struct VSCustomKernelData));
             kd->vsapi = vsapi;
             kd->custom_kernel = custom_kernel;
             params.custom_kernel.user_data = kd;
         }
     } else {
-        params.mode = (enum DescaleMode)user_data;
+        params.mode = (enum DescaleMode)(uintptr_t)user_data;
     }
 
     d.node = vsapi->mapGetNode(in, "src", 0, NULL);
     d.vi = *vsapi->getVideoInfo(d.node);
 
-    if (!vsh_isConstantVideoFormat(&d.vi)) {
+    if (!vsh::isConstantVideoFormat(&d.vi)) {
         vsapi->mapSetError(out, "Descale: Only constant format input is supported.");
         vsapi->freeNode(d.node);
         return;
@@ -295,7 +291,7 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
     d.dd.process_h = d.dd.dst_width != d.dd.src_width || d.dd.shift_h != 0.0 || d.dd.active_width != (double)d.dd.dst_width;
     d.dd.process_v = d.dd.dst_height != d.dd.src_height || d.dd.shift_v != 0.0 || d.dd.active_height != (double)d.dd.dst_height;
 
-    char *funcname;
+    const char *funcname;
 
     if (params.mode == DESCALE_MODE_BILINEAR) {
         funcname = "Debilinear";
@@ -460,13 +456,10 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
 
     d.dd.dsapi = get_descale_api(opt_enum);
     d.initialized = false;
-    pthread_mutex_init(&d.lock, NULL);
 
-    struct VSDescaleData *data = malloc(sizeof d);
-    *data = d;
     data->dd.params = params;
     VSFilterDependency deps[] = {{data->node, rpStrictSpatial}};
-    vsapi->createVideoFilter(out, funcname, &data->vi, descale_get_frame, descale_free, fmParallel, deps, 1, data, core);
+    vsapi->createVideoFilter(out, funcname, &data->vi, descale_get_frame, descale_free, fmParallel, deps, 1, data.release(), core);
 }
 
 

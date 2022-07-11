@@ -1,5 +1,5 @@
-project('Descale', 'c',
-    default_options: ['buildtype=release', 'b_ndebug=if-release', 'c_std=c99'],
+project('Descale', 'c', 'cpp',
+    default_options: ['buildtype=release', 'b_ndebug=if-release', 'c_std=c99', 'cpp_std=c++14'],
     meson_version: '>=0.51.0',
     version: '8'
 )
@@ -7,6 +7,9 @@ project('Descale', 'c',
 add_global_arguments(['-D_XOPEN_SOURCE=700'], language: 'c')
 
 cc = meson.get_compiler('c')
+
+gcc_syntax = cc.get_argument_syntax() == 'gcc'
+is_windows = host_machine.system() == 'windows'
 
 includedirs = ['include', 'src']
 
@@ -19,7 +22,7 @@ deps = []
 libtype = get_option('libtype')
 
 if libtype in ['vapoursynth', 'both']
-    sources += ['src/vsplugin.c']
+    sources += ['src/vsplugin.cc']
 endif
 
 if libtype in ['avisynth', 'both']
@@ -28,13 +31,9 @@ endif
 
 # Don't require VS to be installed on Windows,
 # so we don't need to have VS fully installed
-# in our mingw environment. Just the header files
+# in our build environment. Just the header files
 # are enough.
-if host_machine.system() == 'windows'
-    # Statically link things on Windows.
-    m_dep = cc.find_library('m', static: true, required: false)
-    p_dep = cc.find_library('winpthread', static: true)
-    deps += [m_dep, p_dep]
+if is_windows
     if libtype in ['avisynth', 'both']
         deps += [cc.find_library('AviSynth', dirs: meson.current_source_dir())]
     endif
@@ -44,6 +43,7 @@ if host_machine.system() == 'windows'
     else
         installdir = join_paths(get_option('libdir'), 'avisynth')
     endif
+    m_dep = []
 else
     m_dep = cc.find_library('m', required: false)
     p_dep = cc.find_library('pthread')
@@ -64,13 +64,16 @@ else
 endif
 
 if host_machine.cpu_family().startswith('x86')
-    add_project_arguments('-DDESCALE_X86', '-mfpmath=sse', '-msse2', language : 'c')
+    add_project_arguments('-DDESCALE_X86', language : 'c')
+    if gcc_syntax
+        add_project_arguments('-mfpmath=sse', '-msse2', language : 'c')
+    endif
 
     sources += ['src/x86/cpuinfo_x86.c']
 
     libs += static_library('descale_avx2', 'src/x86/descale_avx2.c',
-                dependencies: [m_dep],
-                c_args: ['-mavx2', '-mfma'],
+                dependencies: m_dep,
+                c_args: gcc_syntax ? ['-mavx2', '-mfma'] : ['/arch:AVX2'],
                 pic: true,
                 include_directories: includedirs
             )
@@ -81,7 +84,7 @@ shared_module('descale', sources,
     dependencies: deps,
     include_directories: includedirs,
     link_with: libs,
-    name_prefix: 'lib',
+    name_prefix: is_windows ? '' : 'lib',
     install: true,
     install_dir: installdir
 )
