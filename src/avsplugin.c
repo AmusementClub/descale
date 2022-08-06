@@ -277,8 +277,8 @@ static AVS_Value AVSC_CC avs_descale_create(AVS_ScriptEnvironment *env, AVS_Valu
     else
         opt_enum = DESCALE_OPT_AUTO;
 
-    int bytes_per_pixel = avs_component_size(vi);
-    if (bytes_per_pixel != 4) {
+    int bits_per_pixel = avs_bits_per_component(vi);
+    if (bits_per_pixel != 32) {
         AVS_Value c2, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11;
         c1 = avs_new_value_clip(clip);
         avs_release_clip(clip);
@@ -300,7 +300,7 @@ static AVS_Value AVSC_CC avs_descale_create(AVS_ScriptEnvironment *env, AVS_Valu
         AVS_Value descale_args[] = {c2, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11};
         c1 = avs_invoke(env, "Descale", avs_new_value_array(descale_args, 12), NULL);
         avs_release_value(c2);
-        a1 = avs_new_value_int(bytes_per_pixel * 8);
+        a1 = avs_new_value_int(bits_per_pixel);
         AVS_Value convert_args2[] = {c1, a1};
         c2 = avs_invoke(env, "ConvertBits", avs_new_value_array(convert_args2, 2), NULL);
         avs_release_value(c1);
@@ -330,6 +330,7 @@ static AVS_Value AVSC_CC avs_descale_create(AVS_ScriptEnvironment *env, AVS_Valu
     avs_release_clip(clip);
     AVS_FilterInfo *fi;
     clip = avs_new_c_filter(env, &fi, c1, true);
+    avs_release_value(c1);
 
     fi->vi.width = dst_width;
     fi->vi.height = dst_height;
