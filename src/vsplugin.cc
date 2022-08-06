@@ -172,7 +172,9 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
         int no_kernel;
         int no_custom_kernel;
         const char *kernel = vsapi->mapGetData(in, "kernel", 0, &no_kernel);
-        custom_kernel = vsapi->mapGetFunction(in, "custom_kernel", 0, &no_custom_kernel);
+        custom_kernel = vsapi->mapGetFunction(in, "custom", 0, &no_custom_kernel);
+        if (no_custom_kernel)
+            custom_kernel = vsapi->mapGetFunction(in, "custom_kernel", 0, &no_custom_kernel);
         if (!no_kernel && !no_custom_kernel) {
             vsapi->mapSetError(out, "Descale: Specify either kernel or custom_kernel, but not both.");
             vsapi->freeFunction(custom_kernel);
@@ -319,12 +321,14 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
         params.taps = vsapi->mapGetIntSaturated(in, "taps", 0, &err);
 
         if (err && params.mode == DESCALE_MODE_CUSTOM) {
-            vsapi->mapSetError(out, "Descale: If custom_kernel is specified, then taps must also be specified.");
-            vsapi->freeFunction(custom_kernel);
-            free(params.custom_kernel.user_data);
-            vsapi->freeNode(d.node);
-            return;
-
+            params.taps = vsapi->mapGetIntSaturated(in, "support", 0, &err);
+            if (err) {
+                vsapi->mapSetError(out, "Descale: If custom_kernel is specified, then taps (or support) must also be specified.");
+                vsapi->freeFunction(custom_kernel);
+                free(params.custom_kernel.user_data);
+                vsapi->freeNode(d.node);
+                return;
+            }
         } else if (err) {
             params.taps = 3;
         }
@@ -562,7 +566,6 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin *plugin, const VSPLUGINAPI
             "width:int;"
             "height:int;"
             "kernel:data:opt;"
-            "custom_kernel:func:opt;"
             "taps:int:opt;"
             "b:float:opt;"
             "c:float:opt;"
@@ -573,7 +576,10 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin *plugin, const VSPLUGINAPI
             "force:int:opt;"
             "force_h:int:opt;"
             "force_v:int:opt;"
-            "opt:int:opt;",
+            "opt:int:opt;"
+            "custom:func:opt;"
+            "support:int:opt;"
+            "custom_kernel:func:opt;",
             "clip:vnode;",
             descale_create, NULL, plugin);
 }
