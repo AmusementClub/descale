@@ -31,10 +31,10 @@ def Descale(src, width, height, kernel=None, custom_kernel=None, taps=None, b=No
     src_sh = src_f.subsampling_h
 
     if src_cf == RGB and not gray:
-        rgb = to_rgbs(src).descale.Descale(width, height, kernel, taps, b, c, custom_kernel=custom_kernel)
+        rgb = to_rgbs(src).descale.Descale(width, height, kernel=kernel, taps=taps, b=b, c=c, custom_kernel=custom_kernel)
         return rgb.resize.Point(format=src_f.id)
 
-    y = to_grays(src).descale.Descale(width, height, kernel, taps, b, c, custom_kernel=custom_kernel)
+    y = to_grays(src).descale.Descale(width, height, kernel=kernel, taps=taps, b=b, c=c, custom_kernel=custom_kernel)
     y_f = core.register_format(GRAY, src_st, src_bits, 0, 0)
     y = y.resize.Point(format=y_f.id)
 
