@@ -78,6 +78,7 @@ typedef struct DescaleParams
     int taps;           // required if mode is LANCZOS or CUSTOM
     double param1;      // required if mode is BICUBIC
     double param2;      // required if mode is BICUBIC
+    double blur;        // optional
     double shift;       // optional
     double active_dim;  // always required; usually equal to dst_dim
     int has_ignore_mask;

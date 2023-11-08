@@ -410,6 +410,10 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
         funcname = "none";
     }
 
+    params.blur = vsapi->mapGetFloat(in, "blur", 0, &err);
+    if (err)
+        params.blur = 1.0;
+
     int force = vsapi->mapGetIntSaturated(in, "force", 0, &err);
     int force_h = vsapi->mapGetIntSaturated(in, "force_h", 0, &err);
     if (err)
@@ -480,6 +484,7 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
         vsapi->mapSetInt(map1, "taps", params.taps, maReplace);
         vsapi->mapSetFloat(map1, "b", params.param1, maReplace);
         vsapi->mapSetFloat(map1, "c", params.param2, maReplace);
+        vsapi->mapSetFloat(map1, "blur", params.blur, maReplace);
         vsapi->mapSetFloat(map1, "src_left", d.dd.shift_h, maReplace);
         vsapi->mapSetFloat(map1, "src_top", d.dd.shift_v, maReplace);
         vsapi->mapSetFloat(map1, "src_width", d.dd.active_width, maReplace);
@@ -544,6 +549,7 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin *plugin, const VSPLUGINAPI
             "src:vnode;"
             "width:int;"
             "height:int;"
+            "blur:float:opt;"
             "src_left:float:opt;"
             "src_top:float:opt;"
             "src_width:float:opt;"
@@ -563,6 +569,7 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin *plugin, const VSPLUGINAPI
             "height:int;"
             "b:float:opt;"
             "c:float:opt;"
+            "blur:float:opt;"
             "src_left:float:opt;"
             "src_top:float:opt;"
             "src_width:float:opt;"
@@ -581,6 +588,7 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin *plugin, const VSPLUGINAPI
             "width:int;"
             "height:int;"
             "taps:int:opt;"
+            "blur:float:opt;"
             "src_left:float:opt;"
             "src_top:float:opt;"
             "src_width:float:opt;"
@@ -598,6 +606,7 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin *plugin, const VSPLUGINAPI
             "src:vnode;"
             "width:int;"
             "height:int;"
+            "blur:float:opt;"
             "src_left:float:opt;"
             "src_top:float:opt;"
             "src_width:float:opt;"
@@ -615,6 +624,7 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin *plugin, const VSPLUGINAPI
             "src:vnode;"
             "width:int;"
             "height:int;"
+            "blur:float:opt;"
             "src_left:float:opt;"
             "src_top:float:opt;"
             "src_width:float:opt;"
@@ -632,6 +642,7 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin *plugin, const VSPLUGINAPI
             "src:vnode;"
             "width:int;"
             "height:int;"
+            "blur:float:opt;"
             "src_left:float:opt;"
             "src_top:float:opt;"
             "src_width:float:opt;"
@@ -653,6 +664,7 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin *plugin, const VSPLUGINAPI
             "taps:int:opt;"
             "b:float:opt;"
             "c:float:opt;"
+            "blur:float:opt;"
             "src_left:float:opt;"
             "src_top:float:opt;"
             "src_width:float:opt;"
