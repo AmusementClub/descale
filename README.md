@@ -24,6 +24,16 @@ descale.Despline64(clip src, int width, int height, float blur=1.0, float src_le
 descale.Descale(clip src, int width, int height, str kernel, func custom_kernel, int taps=3, float b=0.0, float c=0.0, float blur=1.0, float src_left=0.0, float src_top=0.0, float src_width=width, float src_height=height, int border_handling=0, clip ignore_mask=None, bool force=false, bool force_h=false, bool force_v=false, int opt=0)
 ```
 
+The `border_handling` argument can take the following values:
+- 0: Assume the image was resized with mirror padding
+- 1: Assume the image was resized with zero padding
+- 2: Assume the image was resized with extend padding, where the outermost row was extended infinitely far
+
+The `opt` argument can take the following values:
+- 0: Automatically decide based on CPU capabilities
+- 1: No SIMD instructions
+- 2: Use AVX2
+
 The AviSynth+ plugin is used similarly, but without the `descale` namespace.
 Custom kernels and ignore masks are only supported in the VapourSynth plugin.
 
