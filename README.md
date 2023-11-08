@@ -9,19 +9,19 @@ Includes a VapourSynth and AviSynth+ plugin
 The VapourSynth plugin itself supports every constant input format. If the format is subsampled, left-aligned chroma planes are always assumed.
 
 ```
-descale.Debilinear(clip src, int width, int height, float src_left=0.0, float src_top=0.0, float src_width=width, float src_height=height, int border_handling=0, clip ignore_mask=None, bool force=false, bool force_h=false, bool force_v=false, int opt=0)
+descale.Debilinear(clip src, int width, int height, float blur=1.0, float src_left=0.0, float src_top=0.0, float src_width=width, float src_height=height, int border_handling=0, clip ignore_mask=None, bool force=false, bool force_h=false, bool force_v=false, int opt=0)
 
-descale.Debicubic(clip src, int width, int height, float b=0.0, float c=0.5, float src_left=0.0, float src_top=0.0, float src_width=width, float src_height=height, int border_handling=0, clip ignore_mask=None, bool force=false, bool force_h=false, bool force_v=false, int opt=0)
+descale.Debicubic(clip src, int width, int height, float b=0.0, float c=0.5, float blur=1.0, float src_left=0.0, float src_top=0.0, float src_width=width, float src_height=height, int border_handling=0, clip ignore_mask=None, bool force=false, bool force_h=false, bool force_v=false, int opt=0)
 
-descale.Delanczos(clip src, int width, int height, int taps=3, float src_left=0.0, float src_top=0.0, float src_width=width, float src_height=height, int border_handling=0, clip ignore_mask=None, bool force=false, bool force_h=false, bool force_v=false, int opt=0)
+descale.Delanczos(clip src, int width, int height, int taps=3, float blur=1.0, float src_left=0.0, float src_top=0.0, float src_width=width, float src_height=height, int border_handling=0, clip ignore_mask=None, bool force=false, bool force_h=false, bool force_v=false, int opt=0)
 
-descale.Despline16(clip src, int width, int height, float src_left=0.0, float src_top=0.0, float src_width=width, float src_height=height, int border_handling=0, clip ignore_mask=None, bool force=false, bool force_h=false, bool force_v=false, int opt=0)
+descale.Despline16(clip src, int width, int height, float blur=1.0, float src_left=0.0, float src_top=0.0, float src_width=width, float src_height=height, int border_handling=0, clip ignore_mask=None, bool force=false, bool force_h=false, bool force_v=false, int opt=0)
 
-descale.Despline36(clip src, int width, int height, float src_left=0.0, float src_top=0.0, float src_width=width, float src_height=height, int border_handling=0, clip ignore_mask=None, bool force=false, bool force_h=false, bool force_v=false, int opt=0)
+descale.Despline36(clip src, int width, int height, float blur=1.0, float src_left=0.0, float src_top=0.0, float src_width=width, float src_height=height, int border_handling=0, clip ignore_mask=None, bool force=false, bool force_h=false, bool force_v=false, int opt=0)
 
-descale.Despline64(clip src, int width, int height, float src_left=0.0, float src_top=0.0, float src_width=width, float src_height=height, int border_handling=0, clip ignore_mask=None, bool force=false, bool force_h=false, bool force_v=false, int opt=0)
+descale.Despline64(clip src, int width, int height, float blur=1.0, float src_left=0.0, float src_top=0.0, float src_width=width, float src_height=height, int border_handling=0, clip ignore_mask=None, bool force=false, bool force_h=false, bool force_v=false, int opt=0)
 
-descale.Descale(clip src, int width, int height, str kernel, func custom_kernel, int taps=3, float b=0.0, float c=0.0, float src_left=0.0, float src_top=0.0, float src_width=width, float src_height=height, int border_handling=0, clip ignore_mask=None, bool force=false, bool force_h=false, bool force_v=false, int opt=0)
+descale.Descale(clip src, int width, int height, str kernel, func custom_kernel, int taps=3, float b=0.0, float c=0.0, float blur=1.0, float src_left=0.0, float src_top=0.0, float src_width=width, float src_height=height, int border_handling=0, clip ignore_mask=None, bool force=false, bool force_h=false, bool force_v=false, int opt=0)
 ```
 
 The AviSynth+ plugin is used similarly, but without the `descale` namespace.
