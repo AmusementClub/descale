@@ -259,6 +259,9 @@ static void scaling_weights(enum DescaleMode mode, int support, int src_dim, int
             double xpos = begin_pos + j;
             total += calculate_weight(mode, support, xpos - pos, param1, param2, blur, ck);
         }
+        if (total == 0) {
+            total = DBL_EPSILON;
+        }
         for (int j = 0; j < 2 * support; j++) {
             double xpos = begin_pos + j;
             double real_pos = xpos;

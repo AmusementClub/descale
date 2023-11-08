@@ -413,6 +413,12 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
     params.blur = vsapi->mapGetFloat(in, "blur", 0, &err);
     if (err)
         params.blur = 1.0;
+    if (params.blur >= d.dd.src_width >> d.dd.subsampling_h || params.blur >= d.dd.src_height >> d.dd.subsampling_v || params.blur <= 0) {
+        // We also need to ensure that the blur isn't smaller than 1 / support, but we can't know the exact support of the kernel here,
+        vsapi->mapSetError(out, "Descale: blur parameter is out of bounds.");
+        vsapi->freeNode(d.node);
+        vsapi->freeNode(d.ignore_mask_node);
+    }
 
     int force = vsapi->mapGetIntSaturated(in, "force", 0, &err);
     int force_h = vsapi->mapGetIntSaturated(in, "force_h", 0, &err);
