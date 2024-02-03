@@ -79,6 +79,8 @@ typedef struct DescaleParams
     double param1;      // required if mode is BICUBIC
     double param2;      // required if mode is BICUBIC
     double blur;        // optional
+    int post_conv_size;                         // zero if post_conv not set
+    double *post_conv;                          // optional
     double shift;       // optional
     double active_dim;  // always required; usually equal to dst_dim
     int has_ignore_mask;

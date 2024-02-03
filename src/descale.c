@@ -289,6 +289,30 @@ static void scaling_weights(enum DescaleMode mode, int support, int src_dim, int
 }
 
 
+static void convolve_weights(int src_dim, int dst_dim, int kernel_size, double *weights, double *kernel) {
+    double *product = calloc(src_dim * dst_dim, sizeof (double));
+    int kernel_radius = (kernel_size - 1) / 2;
+
+    for (int d = 0; d < dst_dim; d++) {
+        for (int s = 0; s < src_dim; s++) {
+            for (int k = -kernel_radius; k <= kernel_radius; k++) {
+                int pos = d + k;
+                if (pos < 0) {
+                    pos = -1 - pos;
+                } else if (pos >= dst_dim) {
+                    pos = 2 * dst_dim - 1 - pos;
+                }
+
+                product[d * src_dim + s] += weights[pos * src_dim + s] * kernel[k + kernel_radius];
+            }
+        }
+    }
+
+    memcpy(weights, product, src_dim * dst_dim * sizeof (double));
+    free(product);
+}
+
+
 static void process_plane_h_b3_c(int width, int current_width, int current_height, int bandwidth, int * restrict weights_left_idx, int * restrict weights_right_idx,
                                  int weights_columns, float * restrict weights, float * restrict * restrict lower2, float * restrict * restrict upper2,
                                  float * restrict diagonal, int src_stride, int dst_stride, const float * restrict srcp, float * restrict dstp)
@@ -720,6 +744,10 @@ static struct DescaleCore *create_core(int src_dim, int dst_dim, struct DescaleP
     double *ldlt;
 
     scaling_weights(params->mode, support, dst_dim, src_dim, params->param1, params->param2, params->blur, params->shift, params->active_dim, params->border_handling, &params->custom_kernel, &weights);
+    if (params->post_conv_size) {
+        convolve_weights(dst_dim, src_dim, params->post_conv_size, weights, params->post_conv);
+        core.bandwidth += 4 * (params->post_conv_size - 1);
+    }
     transpose_matrix(src_dim, dst_dim, weights, &transposed_weights);
 
     core.weights_left_idx = calloc(ceil_n(dst_dim, 8), sizeof (int));

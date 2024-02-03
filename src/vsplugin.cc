@@ -137,6 +137,7 @@ static void VS_CC descale_free(void *instance_data, VSCore *core, const VSAPI *v
 
     vsapi->freeNode(d->node);
     vsapi->freeNode(d->ignore_mask_node);
+    free(d->dd.params.post_conv);
 
     if (d->initialized) {
         if (d->dd.process_h) {
@@ -461,6 +462,32 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
         return;
     }
 
+    params.post_conv_size = vsapi->mapNumElements(in, "post_conv");
+    if (params.post_conv_size == -1) {
+        params.post_conv_size = 0;
+    }
+
+    if (params.post_conv_size) {
+        if (params.post_conv_size % 2 != 1) {
+            vsapi->mapSetError(out, get_error(funcname, "Post-convolution kernel must have odd length."));
+            vsapi->freeNode(d.node);
+            vsapi->freeNode(d.ignore_mask_node);
+            return;
+        }
+
+        if ((d.dd.process_h && params.post_conv_size > 2 * vi.width + 1) || (d.dd.process_v && params.post_conv_size > 2 * vi.height + 1)) {
+            vsapi->mapSetError(out, get_error(funcname, "Post-convolution kernel is too large, exceeds clip dimensions."));
+            vsapi->freeNode(d.node);
+            vsapi->freeNode(d.ignore_mask_node);
+            return;
+        }
+
+        params.post_conv = calloc(params.post_conv_size, sizeof (double));
+        for (int i = 0; i < params.post_conv_size; i++) {
+            params.post_conv[i] = vsapi->mapGetFloat(in, "post_conv", i, &err);
+        }
+    }
+
     // If necessary, resample to single precision float, call another descale instance,
     // and resample back to the original format
     if (d.vi.format.sampleType != stFloat || d.vi.format.bitsPerSample != 32) {
@@ -517,6 +544,8 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
         vsapi->mapSetInt(map1, "opt", (int)opt_enum, maReplace);
         if (d.ignore_mask_node)
             vsapi->mapSetNode(map1, "ignore_mask", d.ignore_mask_node, maReplace);
+        if (params.post_conv_size)
+            vsapi->mapSetFloatArray(map1, "post_conv", params.post_conv, params.post_conv_size);
         map2 = vsapi->invoke(descale_plugin, "Descale", map1);
         vsapi->freeNode(tmp_node);
         vsapi->freeNode(d.ignore_mask_node);
@@ -569,6 +598,7 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin *plugin, const VSPLUGINAPI
 #define DESCALE_BASE_ARGS "src:vnode;width:int;height:int;"
 #define DESCALE_COM_ARGS \
     "blur:float:opt;" \
+    "post_conv:float[]:opt;" \
     "src_left:float:opt;src_top:float:opt;src_width:float:opt;src_height:float:opt;" \
     "border_handling:int:opt;" \
     "ignore_mask:vnode:opt;" \
