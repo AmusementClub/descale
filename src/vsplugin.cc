@@ -261,6 +261,16 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
     if (err)
         d.dd.active_height = (double)d.dd.dst_height;
 
+    int border_handling = vsapi->mapGetIntSaturated(in, "border_handling", 0, &err);
+    if (err)
+        border_handling = 0;
+    if (border_handling == 1)
+        params.border_handling = DESCALE_BORDER_ZERO;
+    else if (border_handling == 2)
+        params.border_handling = DESCALE_BORDER_REPEAT;
+    else
+        params.border_handling = DESCALE_BORDER_MIRROR;
+
     enum DescaleOpt opt_enum;
     int opt = vsapi->mapGetIntSaturated(in, "opt", 0, &err);
     if (err)
@@ -419,6 +429,7 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
         vsapi->mapSetFloat(map1, "src_top", d.dd.shift_v, maReplace);
         vsapi->mapSetFloat(map1, "src_width", d.dd.active_width, maReplace);
         vsapi->mapSetFloat(map1, "src_height", d.dd.active_height, maReplace);
+        vsapi->mapSetInt(map1, "border_handling", (int)params.border_handling, maReplace);
         vsapi->mapSetInt(map1, "force", force, maReplace);
         vsapi->mapSetInt(map1, "force_h", force_h, maReplace);
         vsapi->mapSetInt(map1, "force_v", force_v, maReplace);
@@ -479,6 +490,10 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin *plugin, const VSPLUGINAPI
             "src_top:float:opt;"
             "src_width:float:opt;"
             "src_height:float:opt;"
+            "border_handling:int:opt;"
+            "force:int:opt;"
+            "force_h:int:opt;"
+            "force_v:int:opt;"
             "opt:int:opt;",
             "clip:vnode;",
             descale_create, (void *)(DESCALE_MODE_BILINEAR), plugin);
@@ -493,6 +508,7 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin *plugin, const VSPLUGINAPI
             "src_top:float:opt;"
             "src_width:float:opt;"
             "src_height:float:opt;"
+            "border_handling:int:opt;"
             "force:int:opt;"
             "force_h:int:opt;"
             "force_v:int:opt;"
@@ -509,6 +525,7 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin *plugin, const VSPLUGINAPI
             "src_top:float:opt;"
             "src_width:float:opt;"
             "src_height:float:opt;"
+            "border_handling:int:opt;"
             "force:int:opt;"
             "force_h:int:opt;"
             "force_v:int:opt;"
@@ -524,6 +541,7 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin *plugin, const VSPLUGINAPI
             "src_top:float:opt;"
             "src_width:float:opt;"
             "src_height:float:opt;"
+            "border_handling:int:opt;"
             "force:int:opt;"
             "force_h:int:opt;"
             "force_v:int:opt;"
@@ -539,6 +557,7 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin *plugin, const VSPLUGINAPI
             "src_top:float:opt;"
             "src_width:float:opt;"
             "src_height:float:opt;"
+            "border_handling:int:opt;"
             "force:int:opt;"
             "force_h:int:opt;"
             "force_v:int:opt;"
@@ -554,6 +573,7 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin *plugin, const VSPLUGINAPI
             "src_top:float:opt;"
             "src_width:float:opt;"
             "src_height:float:opt;"
+            "border_handling:int:opt;"
             "force:int:opt;"
             "force_h:int:opt;"
             "force_v:int:opt;"
@@ -573,6 +593,7 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin *plugin, const VSPLUGINAPI
             "src_top:float:opt;"
             "src_width:float:opt;"
             "src_height:float:opt;"
+            "border_handling:int:opt;"
             "force:int:opt;"
             "force_h:int:opt;"
             "force_v:int:opt;"
