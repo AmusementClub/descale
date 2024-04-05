@@ -2,7 +2,7 @@
 
 Video/Image filter to undo upscaling.
 
-Includes a VapourSynth and AviSynth+ plugin
+This fork only supports VapourSynth, none of the new options are mapped in AviSynth. PRs to add AviSynth support are welcome, but apart from that the AviSynth plugin can be considered frozen.
 
 ## Usage
 
