@@ -243,6 +243,8 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
                 params.mode = DESCALE_MODE_SPLINE36;
             else if (string_is_equal_ignore_case(kernel, "spline64"))
                 params.mode = DESCALE_MODE_SPLINE64;
+            else if (string_is_equal_ignore_case(kernel, "point"))
+                params.mode = DESCALE_MODE_POINT;
             else {
                 vsapi->mapSetError(out, "Descale: Invalid kernel specified.");
                 return;
@@ -274,6 +276,8 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
             funcname = "Despline36"; break;
         case DESCALE_MODE_SPLINE64:
             funcname = "Despline64"; break;
+        case DESCALE_MODE_POINT:
+            funcname = "Depoint"; break;
         case DESCALE_MODE_CUSTOM:
             funcname = "Descale"; break;
         default:
@@ -635,6 +639,8 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin *plugin, const VSPLUGINAPI
     vspapi->registerFunction("Despline36", DESCALE_ALL_ARGS, DESCALE_OUT_ARGS, descale_create, (void *)(DESCALE_MODE_SPLINE36), plugin);
 
     vspapi->registerFunction("Despline64", DESCALE_ALL_ARGS, DESCALE_OUT_ARGS, descale_create, (void *)(DESCALE_MODE_SPLINE64), plugin);
+
+    vspapi->registerFunction("Depoint", DESCALE_ALL_ARGS, DESCALE_OUT_ARGS, descale_create, (void *)(DESCALE_MODE_POINT), plugin);
 
     vspapi->registerFunction("Descale", DESCALE_BASE_ARGS "kernel:data:opt;" "taps:int:opt;" "b:float:opt;" "c:float:opt;" DESCALE_COM_ARGS "custom:func:opt;" "support:int:opt;" "custom_kernel:func:opt;", DESCALE_OUT_ARGS, descale_create, (void *)DESCALE_MODE_CUSTOM, plugin);
 

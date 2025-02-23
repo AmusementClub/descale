@@ -222,6 +222,8 @@ static double calculate_weight(enum DescaleMode mode, int support, double distan
         } else {
             return 0.0;
         }
+    } else if (mode == DESCALE_MODE_POINT) {
+        return 1.0;
     } else if (mode == DESCALE_MODE_CUSTOM) {
         return ck->f(distance, ck->user_data);
     }
@@ -249,20 +251,21 @@ static void scaling_weights(enum DescaleMode mode, int support, int src_dim, int
 {
     *weights = calloc(src_dim * dst_dim, sizeof (double));
     double ratio = (double)dst_dim / active_dim;
+    unsigned filter_size = support > 0 ? 2 * support : 1;
 
     for (int i = 0; i < dst_dim; i++) {
 
         double total = 0.0;
         double pos = (i + 0.5) / ratio + shift;
-        double begin_pos = round_halfup(pos - support) + 0.5;
-        for (int j = 0; j < 2 * support; j++) {
+        double begin_pos = round_halfup(pos - filter_size / 2.0) + 0.5;
+        for (int j = 0; j < filter_size; j++) {
             double xpos = begin_pos + j;
             total += calculate_weight(mode, support, xpos - pos, param1, param2, blur, ck);
         }
         if (total == 0) {
             total = DBL_EPSILON;
         }
-        for (int j = 0; j < 2 * support; j++) {
+        for (int j = 0; j < filter_size; j++) {
             double xpos = begin_pos + j;
             double real_pos = xpos;
 
@@ -723,6 +726,8 @@ static struct DescaleCore *create_core(int src_dim, int dst_dim, struct DescaleP
         support = 3;
     } else if (params->mode == DESCALE_MODE_SPLINE64) {
         support = 4;
+    } else if (params->mode == DESCALE_MODE_POINT) {
+        support = 0;
     } else if (params->mode == DESCALE_MODE_CUSTOM) {
         support = params->taps;
     } else {
@@ -731,12 +736,12 @@ static struct DescaleCore *create_core(int src_dim, int dst_dim, struct DescaleP
 
     support = ceil(support * params->blur);
 
-    if (support == 0)
+    if (support == 0 && params->mode != DESCALE_MODE_POINT)
         return NULL;
 
     core.src_dim = src_dim;
     core.dst_dim = dst_dim;
-    core.bandwidth = support * 4 - 1;
+    core.bandwidth = (support > 0 ? support : 1) * 4 - 1;
 
     double *weights;
     double *transposed_weights;
