@@ -14,13 +14,13 @@ jobs:
           - amd64
           - x86
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: setup MS dev commands
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: ${{ matrix.arch }}
       - name: Setup Python
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v6
         with:
           python-version: '3.x'
       - name: install meson and ninja
@@ -43,7 +43,7 @@ jobs:
       - name: Meson compile
         run: meson compile -C builddir/ -v
       - name: Upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: release-${{matrix.arch}}
           path: |
