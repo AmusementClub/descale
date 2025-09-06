@@ -53,6 +53,20 @@ struct VSCustomKernelData
 };
 
 
+static const char *VS_CC get_error(const char *funcname, const char *error) {
+    const size_t flen = strlen(funcname);
+    const size_t elen = strlen(error);
+
+    char *out = (char *)malloc(flen + 2 + elen + 1);
+
+    memcpy(out, funcname, flen);
+    memcpy(out + flen, ": ", 2);
+    memcpy(out + flen + 2, error, elen);
+    memset(out + flen + 2 + elen, 0, 1);
+
+    return out;
+}
+
 static const VSFrame *VS_CC descale_get_frame(int n, int activation_reason, void *instance_data, void **frame_data, VSFrameContext *frame_ctx, VSCore *core, const VSAPI *vsapi)
 {
     struct VSDescaleData *d = (struct VSDescaleData *)instance_data;
@@ -228,11 +242,32 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
         params.mode = (enum DescaleMode)(uintptr_t)user_data;
     }
 
+    const char *funcname;
+    switch(params.mode) {
+        case DESCALE_MODE_BILINEAR:
+            funcname = "Debilinear"; break;
+        case DESCALE_MODE_BICUBIC:
+            funcname = "Debicubic"; break;
+        case DESCALE_MODE_LANCZOS:
+            funcname = "Delanczos"; break;
+        case DESCALE_MODE_SPLINE16:
+            funcname = "Despline16"; break;
+        case DESCALE_MODE_SPLINE36:
+            funcname = "Despline36"; break;
+        case DESCALE_MODE_SPLINE64:
+            funcname = "Despline64"; break;
+        case DESCALE_MODE_CUSTOM:
+            funcname = "Descale"; break;
+        default:
+            vsapi->mapSetError(out, get_error("Descale", "Wrong API use!"));
+            return;
+    }
+
     d.node = vsapi->mapGetNode(in, "src", 0, NULL);
     d.vi = *vsapi->getVideoInfo(d.node);
 
     if (!vsh::isConstantVideoFormat(&d.vi)) {
-        vsapi->mapSetError(out, "Descale: Only constant format input is supported.");
+        vsapi->mapSetError(out, get_error(funcname, "Only constant format input is supported."));
         vsapi->freeNode(d.node);
         return;
     }
@@ -248,12 +283,12 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
     d.dd.num_planes = d.vi.format.numPlanes;
 
     if (d.dd.dst_width % (1 << d.dd.subsampling_h) != 0) {
-        vsapi->mapSetError(out, "Descale: Output width and output subsampling are not compatible.");
+        vsapi->mapSetError(out, get_error(funcname, "Output width and output subsampling are not compatible."));
         vsapi->freeNode(d.node);
         return;
     }
     if (d.dd.dst_height % (1 << d.dd.subsampling_v) != 0) {
-        vsapi->mapSetError(out, "Descale: Output height and output subsampling are not compatible.");
+        vsapi->mapSetError(out, get_error(funcname, "Output height and output subsampling are not compatible."));
         vsapi->freeNode(d.node);
         return;
     }
@@ -267,7 +302,7 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
         params.has_ignore_mask = 1;
         const VSVideoInfo *mvi = vsapi->getVideoInfo(d.ignore_mask_node);
         if (mvi->format.sampleType != stInteger || mvi->format.bitsPerSample != 8) {
-            vsapi->mapSetError(out, "Descale: Ignore mask must use 8 bit integer samples.");    // TODO improve this?
+            vsapi->mapSetError(out, get_error(funcname, "Ignore mask must use 8 bit integer samples."));    // TODO improve this?
             vsapi->freeNode(d.node);
             vsapi->freeNode(d.ignore_mask_node);
             return;
@@ -278,7 +313,7 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
                 || mvi->width != d.dd.src_width
                 || mvi->height != d.dd.src_height
                 || mvi->numFrames != d.vi.numFrames) {
-            vsapi->mapSetError(out, "Descale: Ignore mask format must match clip format.");    // TODO improve this?
+            vsapi->mapSetError(out, get_error(funcname, "Ignore mask format must match clip format."));    // TODO improve this?
             vsapi->freeNode(d.node);
             vsapi->freeNode(d.ignore_mask_node);
             return;
@@ -326,21 +361,21 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
         opt_enum = DESCALE_OPT_NONE;
 
     if (d.dd.dst_width < 1) {
-        vsapi->mapSetError(out, "Descale: width must be greater than 0.");
+        vsapi->mapSetError(out, get_error(funcname, "width must be greater than 0."));
         vsapi->freeNode(d.node);
         vsapi->freeNode(d.ignore_mask_node);
         return;
     }
 
     if (d.dd.dst_height < 8) {
-        vsapi->mapSetError(out, "Descale: Output height must be greater than or equal to 8.");
+        vsapi->mapSetError(out, get_error(funcname, "Output height must be greater than or equal to 8."));
         vsapi->freeNode(d.node);
         vsapi->freeNode(d.ignore_mask_node);
         return;
     }
 
     if (d.dd.dst_width > d.dd.src_width || d.dd.dst_height > d.dd.src_height) {
-        vsapi->mapSetError(out, "Descale: Output dimension must be less than or equal to input dimension.");
+        vsapi->mapSetError(out, get_error(funcname, "Output dimension must be less than or equal to input dimension."));
         vsapi->freeNode(d.node);
         vsapi->freeNode(d.ignore_mask_node);
         return;
@@ -349,12 +384,7 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
     d.dd.process_h = d.dd.dst_width != d.dd.src_width || d.dd.shift_h != 0.0 || d.dd.active_width != (double)d.dd.dst_width;
     d.dd.process_v = d.dd.dst_height != d.dd.src_height || d.dd.shift_v != 0.0 || d.dd.active_height != (double)d.dd.dst_height;
 
-    const char *funcname;
-
-    if (params.mode == DESCALE_MODE_BILINEAR) {
-        funcname = "Debilinear";
-    
-    } else if (params.mode == DESCALE_MODE_BICUBIC) {
+    if (params.mode == DESCALE_MODE_BICUBIC) {
         params.param1 = vsapi->mapGetFloat(in, "b", 0, &err);
         if (err)
             params.param1 = 0.0;
@@ -362,8 +392,6 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
         params.param2 = vsapi->mapGetFloat(in, "c", 0, &err);
         if (err)
             params.param2 = 0.5;
-
-        funcname = "Debicubic";
 
         // If b != 0 Bicubic is not an interpolation filter, so force processing
         /*if (params.param1 != 0) {
@@ -379,7 +407,7 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
         if (err && params.mode == DESCALE_MODE_CUSTOM) {
             params.taps = vsapi->mapGetIntSaturated(in, "support", 0, &err);
             if (err) {
-                vsapi->mapSetError(out, "Descale: If custom_kernel is specified, then taps (or support) must also be specified.");
+                vsapi->mapSetError(out, get_error(funcname, "If custom_kernel is specified, then taps (or support) must also be specified."));
                 vsapi->freeFunction(custom_kernel);
                 free(params.custom_kernel.user_data);
                 vsapi->freeNode(d.node);
@@ -390,24 +418,11 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
         }
 
         if (params.taps < 1) {
-            vsapi->mapSetError(out, "Descale: taps must be greater than 0.");
+            vsapi->mapSetError(out, get_error(funcname, "taps must be greater than 0."));
             vsapi->freeNode(d.node);
             vsapi->freeNode(d.ignore_mask_node);
             return;
         }
-
-        funcname = "Delanczos";
-
-    } else if (params.mode == DESCALE_MODE_SPLINE16) {
-        funcname = "Despline16";
-
-    } else if (params.mode == DESCALE_MODE_SPLINE36) {
-        funcname = "Despline36";
-
-    } else if (params.mode == DESCALE_MODE_SPLINE64) {
-        funcname = "Despline64";
-    } else {
-        funcname = "none";
     }
 
     params.blur = vsapi->mapGetFloat(in, "blur", 0, &err);
@@ -415,7 +430,7 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
         params.blur = 1.0;
     if (params.blur >= d.dd.src_width >> d.dd.subsampling_h || params.blur >= d.dd.src_height >> d.dd.subsampling_v || params.blur <= 0) {
         // We also need to ensure that the blur isn't smaller than 1 / support, but we can't know the exact support of the kernel here,
-        vsapi->mapSetError(out, "Descale: blur parameter is out of bounds.");
+        vsapi->mapSetError(out, get_error(funcname, "blur parameter is out of bounds."));
         vsapi->freeNode(d.node);
         vsapi->freeNode(d.ignore_mask_node);
     }
@@ -440,7 +455,7 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
     }
 
     if (d.dd.process_h && d.dd.process_v && d.ignore_mask_node) {
-        vsapi->mapSetError(out, "Descale: Ignore mask is not supported when descaling along both axes.");
+        vsapi->mapSetError(out, get_error(funcname, "Ignore mask is not supported when descaling along both axes."));
         vsapi->freeNode(d.node);
         vsapi->freeNode(d.ignore_mask_node);
         return;
@@ -468,7 +483,7 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
         vsapi->freeNode(d.node);
         vsapi->freeMap(map1);
         if (vsapi->mapGetError(map2)) {
-            vsapi->mapSetError(out, "Descale: Resampling to single precision float failed.");
+            vsapi->mapSetError(out, get_error(funcname, "Resampling to single precision float failed."));
             vsapi->freeMap(map2);
             return;
         }
@@ -523,7 +538,7 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
         vsapi->freeNode(tmp_node);
         vsapi->freeMap(map1);
         if (vsapi->mapGetError(map2)) {
-            vsapi->mapSetError(out, "Descale: Resampling to original format failed.");
+            vsapi->mapSetError(out, get_error(funcname, "Resampling to original format failed."));
             vsapi->freeMap(map2);
             return;
         }
@@ -549,141 +564,35 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
 
 VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin *plugin, const VSPLUGINAPI *vspapi)
 {
-    vspapi->configPlugin("tegaf.asi.xe", "descale", "Undo linear interpolation", VS_MAKE_VERSION(1, 0), VAPOURSYNTH_API_VERSION, 0, plugin);
+    vspapi->configPlugin("tegaf.asi.xe", "descale", "Undo linear interpolation", VS_MAKE_VERSION(2, 0), VAPOURSYNTH_API_VERSION, 0, plugin);
 
-    vspapi->registerFunction("Debilinear",
-            "src:vnode;"
-            "width:int;"
-            "height:int;"
-            "blur:float:opt;"
-            "src_left:float:opt;"
-            "src_top:float:opt;"
-            "src_width:float:opt;"
-            "src_height:float:opt;"
-            "border_handling:int:opt;"
-            "ignore_mask:vnode:opt;"
-            "force:int:opt;"
-            "force_h:int:opt;"
-            "force_v:int:opt;"
-            "opt:int:opt;",
-            "clip:vnode;",
-            descale_create, (void *)(DESCALE_MODE_BILINEAR), plugin);
+#define DESCALE_BASE_ARGS "src:vnode;width:int;height:int;"
+#define DESCALE_COM_ARGS \
+    "blur:float:opt;" \
+    "src_left:float:opt;src_top:float:opt;src_width:float:opt;src_height:float:opt;" \
+    "border_handling:int:opt;" \
+    "ignore_mask:vnode:opt;" \
+    "force:int:opt;force_h:int:opt;force_v:int:opt;" \
+    "opt:int:opt;"
+#define DESCALE_OUT_ARGS "clip:vnode;"
+#define DESCALE_ALL_ARGS DESCALE_BASE_ARGS DESCALE_COM_ARGS
 
-    vspapi->registerFunction("Debicubic",
-            "src:vnode;"
-            "width:int;"
-            "height:int;"
-            "b:float:opt;"
-            "c:float:opt;"
-            "blur:float:opt;"
-            "src_left:float:opt;"
-            "src_top:float:opt;"
-            "src_width:float:opt;"
-            "src_height:float:opt;"
-            "border_handling:int:opt;"
-            "ignore_mask:vnode:opt;"
-            "force:int:opt;"
-            "force_h:int:opt;"
-            "force_v:int:opt;"
-            "opt:int:opt;",
-            "clip:vnode;",
-            descale_create, (void *)(DESCALE_MODE_BICUBIC), plugin);
+    vspapi->registerFunction("Debilinear", DESCALE_ALL_ARGS, DESCALE_OUT_ARGS, descale_create, (void *)(DESCALE_MODE_BILINEAR), plugin);
 
-    vspapi->registerFunction("Delanczos",
-            "src:vnode;"
-            "width:int;"
-            "height:int;"
-            "taps:int:opt;"
-            "blur:float:opt;"
-            "src_left:float:opt;"
-            "src_top:float:opt;"
-            "src_width:float:opt;"
-            "src_height:float:opt;"
-            "border_handling:int:opt;"
-            "ignore_mask:vnode:opt;"
-            "force:int:opt;"
-            "force_h:int:opt;"
-            "force_v:int:opt;"
-            "opt:int:opt;",
-            "clip:vnode;",
-            descale_create, (void *)(DESCALE_MODE_LANCZOS), plugin);
+    vspapi->registerFunction("Debicubic", DESCALE_BASE_ARGS "b:float:opt;" "c:float:opt;" DESCALE_COM_ARGS, DESCALE_OUT_ARGS, descale_create, (void *)(DESCALE_MODE_BICUBIC), plugin);
 
-    vspapi->registerFunction("Despline16",
-            "src:vnode;"
-            "width:int;"
-            "height:int;"
-            "blur:float:opt;"
-            "src_left:float:opt;"
-            "src_top:float:opt;"
-            "src_width:float:opt;"
-            "src_height:float:opt;"
-            "border_handling:int:opt;"
-            "ignore_mask:vnode:opt;"
-            "force:int:opt;"
-            "force_h:int:opt;"
-            "force_v:int:opt;"
-            "opt:int:opt;",
-            "clip:vnode;",
-            descale_create, (void *)(DESCALE_MODE_SPLINE16), plugin);
+    vspapi->registerFunction("Delanczos", DESCALE_BASE_ARGS "taps:int:opt;" DESCALE_COM_ARGS, DESCALE_OUT_ARGS, descale_create, (void *)(DESCALE_MODE_LANCZOS), plugin);
 
-    vspapi->registerFunction("Despline36",
-            "src:vnode;"
-            "width:int;"
-            "height:int;"
-            "blur:float:opt;"
-            "src_left:float:opt;"
-            "src_top:float:opt;"
-            "src_width:float:opt;"
-            "src_height:float:opt;"
-            "border_handling:int:opt;"
-            "ignore_mask:vnode:opt;"
-            "force:int:opt;"
-            "force_h:int:opt;"
-            "force_v:int:opt;"
-            "opt:int:opt;",
-            "clip:vnode;",
-            descale_create, (void *)(DESCALE_MODE_SPLINE36), plugin);
+    vspapi->registerFunction("Despline16", DESCALE_ALL_ARGS, DESCALE_OUT_ARGS, descale_create, (void *)(DESCALE_MODE_SPLINE16), plugin);
 
-    vspapi->registerFunction("Despline64",
-            "src:vnode;"
-            "width:int;"
-            "height:int;"
-            "blur:float:opt;"
-            "src_left:float:opt;"
-            "src_top:float:opt;"
-            "src_width:float:opt;"
-            "src_height:float:opt;"
-            "border_handling:int:opt;"
-            "ignore_mask:vnode:opt;"
-            "force:int:opt;"
-            "force_h:int:opt;"
-            "force_v:int:opt;"
-            "opt:int:opt;",
-            "clip:vnode;",
-            descale_create, (void *)(DESCALE_MODE_SPLINE64), plugin);
+    vspapi->registerFunction("Despline36", DESCALE_ALL_ARGS, DESCALE_OUT_ARGS, descale_create, (void *)(DESCALE_MODE_SPLINE36), plugin);
 
-    vspapi->registerFunction("Descale",
-            "src:vnode;"
-            "width:int;"
-            "height:int;"
-            "kernel:data:opt;"
-            "taps:int:opt;"
-            "b:float:opt;"
-            "c:float:opt;"
-            "blur:float:opt;"
-            "src_left:float:opt;"
-            "src_top:float:opt;"
-            "src_width:float:opt;"
-            "src_height:float:opt;"
-            "border_handling:int:opt;"
-            "ignore_mask:vnode:opt;"
-            "force:int:opt;"
-            "force_h:int:opt;"
-            "force_v:int:opt;"
-            "opt:int:opt;"
-            "custom:func:opt;"
-            "support:int:opt;"
-            "custom_kernel:func:opt;",
-            "clip:vnode;",
-            descale_create, NULL, plugin);
+    vspapi->registerFunction("Despline64", DESCALE_ALL_ARGS, DESCALE_OUT_ARGS, descale_create, (void *)(DESCALE_MODE_SPLINE64), plugin);
+
+    vspapi->registerFunction("Descale", DESCALE_BASE_ARGS "kernel:data:opt;" "taps:int:opt;" "b:float:opt;" "c:float:opt;" DESCALE_COM_ARGS "custom:func:opt;" "support:int:opt;" "custom_kernel:func:opt;", DESCALE_OUT_ARGS, descale_create, (void *)DESCALE_MODE_CUSTOM, plugin);
+
+#undef DESCALE_BASE_ARGS
+#undef DESCALE_COM_ARGS
+#undef DESCALE_OUT_ARGS
+#undef DESCALE_ALL_ARGS
 }
