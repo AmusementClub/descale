@@ -427,14 +427,11 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
         params.taps = vsapi->mapGetIntSaturated(in, "taps", 0, &err);
 
         if (err && params.mode == DESCALE_MODE_CUSTOM) {
-            params.taps = vsapi->mapGetIntSaturated(in, "support", 0, &err);
-            if (err) {
-                vsapi->mapSetError(out, get_error(funcname, "If custom_kernel is specified, then taps (or support) must also be specified."));
-                vsapi->freeFunction(custom_kernel);
-                free(params.custom_kernel.user_data);
-                vsapi->freeNode(d.node);
-                return;
-            }
+            vsapi->mapSetError(out, get_error(funcname, "If custom_kernel is specified, then taps must also be specified."));
+            vsapi->freeFunction(custom_kernel);
+            free(params.custom_kernel.user_data);
+            vsapi->freeNode(d.node);
+            return;
         } else if (err) {
             params.taps = 3;
         }
@@ -618,11 +615,11 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin *plugin, const VSPLUGINAPI
 
 #define DESCALE_BASE_ARGS "src:vnode;width:int;height:int;"
 #define DESCALE_COM_ARGS \
-    "blur:float:opt;" \
-    "post_conv:float[]:opt;" \
     "src_left:float:opt;src_top:float:opt;src_width:float:opt;src_height:float:opt;" \
     "border_handling:int:opt;" \
     "ignore_mask:vnode:opt;" \
+    "blur:float:opt;" \
+    "post_conv:float[]:opt;" \
     "force:int:opt;force_h:int:opt;force_v:int:opt;" \
     "opt:int:opt;"
 #define DESCALE_OUT_ARGS "clip:vnode;"
@@ -642,7 +639,7 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin *plugin, const VSPLUGINAPI
 
     vspapi->registerFunction("Depoint", DESCALE_ALL_ARGS, DESCALE_OUT_ARGS, descale_create, (void *)(DESCALE_MODE_POINT), plugin);
 
-    vspapi->registerFunction("Descale", DESCALE_BASE_ARGS "kernel:data:opt;" "taps:int:opt;" "b:float:opt;" "c:float:opt;" DESCALE_COM_ARGS "custom:func:opt;" "support:int:opt;" "custom_kernel:func:opt;", DESCALE_OUT_ARGS, descale_create, (void *)DESCALE_MODE_CUSTOM, plugin);
+    vspapi->registerFunction("Descale", DESCALE_BASE_ARGS "kernel:data:opt;" "custom:func:opt;" "custom_kernel:func:opt;" "taps:int:opt;" "b:float:opt;" "c:float:opt;" DESCALE_COM_ARGS, DESCALE_OUT_ARGS, descale_create, (void *)DESCALE_MODE_CUSTOM, plugin);
 
 #undef DESCALE_BASE_ARGS
 #undef DESCALE_COM_ARGS
