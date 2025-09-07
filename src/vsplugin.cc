@@ -493,14 +493,14 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
             return;
         }
 
-        if ((d.dd.process_h && params.post_conv_size > 2 * vi.width + 1) || (d.dd.process_v && params.post_conv_size > 2 * vi.height + 1)) {
+        if ((d.dd.process_h && params.post_conv_size > 2 * d.vi.width + 1) || (d.dd.process_v && params.post_conv_size > 2 * d.vi.height + 1)) {
             vsapi->mapSetError(out, get_error(funcname, "Post-convolution kernel is too large, exceeds clip dimensions."));
             vsapi->freeNode(d.node);
             vsapi->freeNode(d.ignore_mask_node);
             return;
         }
 
-        params.post_conv = calloc(params.post_conv_size, sizeof (double));
+        params.post_conv = (double *)calloc(params.post_conv_size, sizeof (double));
         for (int i = 0; i < params.post_conv_size; i++) {
             params.post_conv[i] = vsapi->mapGetFloat(in, "post_conv", i, &err);
         }
