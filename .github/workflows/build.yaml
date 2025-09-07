@@ -1,9 +1,14 @@
 name: Build
 on:
-  - push
-  - release
-  - pull_request
-  - workflow_dispatch
+  release:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'which tag to create and release?'
+        required: true
+        default: 'v100'
 
 jobs:
   build:
@@ -14,17 +19,22 @@ jobs:
           - amd64
           - x86
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
       - name: setup MS dev commands
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: ${{ matrix.arch }}
+
       - name: Setup Python
         uses: actions/setup-python@v6
         with:
           python-version: '3.x'
+
       - name: install meson and ninja
         run: pip install meson ninja
+
       - name: Plug in vs-api3
         shell: bash
         run: |
@@ -32,19 +42,41 @@ jobs:
           cp api3/api3.cc src/
           sed -i -e "/vsplugin.cc'/s//&, 'src\\/api3.cc'/" meson.build
           cat meson.build
+
       - name: download VS headers and patch header location
         shell: bash
         run: |
           git clone https://github.com/AmusementClub/vapoursynth-classic --depth=1 --branch doodle2 vapoursynth
           cp vapoursynth/include/*.h src/
           sed -i -e '/#include <vapoursynth/ { s|vapoursynth/||g; y|<>|""|; }' src/vsplugin.cc
+
       - name: Meson setup
         run: meson setup builddir/ -Db_vscrt=mt
+
       - name: Meson compile
         run: meson compile -C builddir/ -v
+
+      - name: Package Release
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.tag != ''
+        shell: bash
+        run: |
+          git clone https://github.com/AkarinVS/exe/
+          cd builddir/
+          ../exe/zip.exe -9r ../descale-${{ github.event.inputs.tag }}-${{ matrix.arch }}.zip *.dll
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: release-${{matrix.arch}}
+          name: release-${{ matrix.arch }}
           path: |
             builddir/descale.dll
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.tag != ''
+        with:
+          tag_name: ${{ github.event.inputs.tag }}
+          files: "descale-${{ github.event.inputs.tag }}-${{ matrix.arch }}.zip"
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
