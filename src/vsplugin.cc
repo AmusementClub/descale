@@ -279,7 +279,7 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
         case DESCALE_MODE_POINT:
             funcname = "Depoint"; break;
         case DESCALE_MODE_CUSTOM:
-            funcname = "Descale"; break;
+            funcname = "Decustom"; break;
         default:
             vsapi->mapSetError(out, get_error("Descale", "Wrong API use!"));
             return;
@@ -639,7 +639,9 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin *plugin, const VSPLUGINAPI
 
     vspapi->registerFunction("Depoint", DESCALE_ALL_ARGS, DESCALE_OUT_ARGS, descale_create, (void *)(DESCALE_MODE_POINT), plugin);
 
-    vspapi->registerFunction("Descale", DESCALE_BASE_ARGS "kernel:data:opt;" "custom:func:opt;" "custom_kernel:func:opt;" "taps:int:opt;" "b:float:opt;" "c:float:opt;" DESCALE_COM_ARGS, DESCALE_OUT_ARGS, descale_create, (void *)DESCALE_MODE_CUSTOM, plugin);
+    vspapi->registerFunction("Decustom", DESCALE_BASE_ARGS "custom:func:opt;" "custom_kernel:func:opt;" "taps:int:opt;" DESCALE_COM_ARGS, DESCALE_OUT_ARGS, descale_create, NULL, plugin);
+
+    vspapi->registerFunction("Descale", DESCALE_BASE_ARGS "kernel:data:opt;" "custom:func:opt;" "custom_kernel:func:opt;" "taps:int:opt;" "b:float:opt;" "c:float:opt;" DESCALE_COM_ARGS, DESCALE_OUT_ARGS, descale_create, NULL, plugin);
 
 #undef DESCALE_BASE_ARGS
 #undef DESCALE_COM_ARGS
