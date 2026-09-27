@@ -20,7 +20,7 @@ jobs:
           - x86
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: setup MS dev commands
         uses: ilammy/msvc-dev-cmd@v1
@@ -28,7 +28,7 @@ jobs:
           arch: ${{ matrix.arch }}
 
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.x'
 
@@ -65,14 +65,14 @@ jobs:
           ../exe/zip.exe -9r ../descale-${{ github.event.inputs.tag }}-${{ matrix.arch }}.zip *.dll
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-${{ matrix.arch }}
           path: |
             builddir/descale.dll
 
       - name: Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.tag != ''
         with:
           tag_name: ${{ github.event.inputs.tag }}
