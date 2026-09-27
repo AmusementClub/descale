@@ -516,6 +516,7 @@ static void VS_CC descale_create(const VSMap *in, VSMap *out, void *user_data, V
         vsapi->mapSetError(out, get_error(funcname, "blur parameter is out of bounds."));
         vsapi->freeNode(d.node);
         vsapi->freeNode(d.ignore_mask_node);
+        return;
     }
 
     int force = vsapi->mapGetIntSaturated(in, "force", 0, &err);
